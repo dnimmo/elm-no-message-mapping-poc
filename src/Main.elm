@@ -9,6 +9,7 @@ import Page.Error as Error
 import Page.FetchingUser as FetchingUser
 import Route exposing (Route(..))
 import Url exposing (Url)
+import User exposing (User)
 
 
 
@@ -18,13 +19,14 @@ import Url exposing (Url)
 type alias Model =
     { navKey : Nav.Key
     , state : State
+    , user : Maybe User
     }
 
 
 type State
     = Loading
     | FetchingUser FetchingUser.Model
-    | ViewingDashboard
+    | ViewingDashboard Dashboard.Model
     | ViewingDiscoveryForm
     | ViewingErrorPage
 
@@ -65,7 +67,16 @@ handleUrlChange url model =
             fetchUser model
 
         Dashboard ->
-            ( { model | state = ViewingDashboard }, Cmd.none )
+            case model.user of
+                Just user ->
+                    ( { model
+                        | state = ViewingDashboard <| Dashboard.init user
+                      }
+                    , Cmd.none
+                    )
+
+                Nothing ->
+                    fetchUser model
 
         DiscoveryForm ->
             ( { model | state = ViewingDiscoveryForm }, Cmd.none )
@@ -80,11 +91,12 @@ update msg model =
         FetchingUserMsg fetchingUserMsg ->
             let
                 -- TODO: Refactor here so that we don't need let/in?
-                ( fetchingUserModel, fetchingUserCmd ) =
+                ( fetchingUserModel, fetchingUserCmd, maybeUser ) =
                     FetchingUser.update model.navKey fetchingUserMsg
             in
             ( { model
                 | state = FetchingUser fetchingUserModel
+                , user = maybeUser
               }
             , Cmd.map FetchingUserMsg fetchingUserCmd
             )
@@ -97,6 +109,7 @@ update msg model =
 -- VIEW
 
 
+loadingView : Element msg
 loadingView =
     text "Loading..."
 
@@ -113,8 +126,8 @@ view model =
                 FetchingUser fetchingUserModel ->
                     FetchingUser.view fetchingUserModel
 
-                ViewingDashboard ->
-                    Dashboard.view
+                ViewingDashboard dashboardModel ->
+                    Dashboard.view dashboardModel
 
                 ViewingDiscoveryForm ->
                     DiscoveryForm.view
@@ -135,6 +148,7 @@ init _ url navKey =
         startingModel =
             { navKey = navKey
             , state = Loading
+            , user = Nothing
             }
 
         ( initialModel, initialCmd ) =

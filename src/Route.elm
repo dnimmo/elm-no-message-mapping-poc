@@ -4,6 +4,7 @@ import Browser.Navigation as Nav
 import Url exposing (Url)
 import Url.Builder exposing (absolute)
 import Url.Parser exposing ((</>), (<?>), Parser, map, oneOf, parse, s, top)
+import User exposing (User)
 
 
 type Route

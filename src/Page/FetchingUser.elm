@@ -3,7 +3,7 @@ module Page.FetchingUser exposing (Model, Msg, init, subscriptions, update, view
 import Browser.Navigation exposing (Key)
 import Element exposing (..)
 import Route
-import User
+import User exposing (User)
 
 
 
@@ -20,14 +20,14 @@ type Model
 
 
 type Msg
-    = UserReceived String -- TODO: Make this a result for a better demonstration
+    = UserReceived String -- TODO: Make this a Result for a better demonstration
 
 
-update : Key -> Msg -> ( Model, Cmd msg )
+update : Key -> Msg -> ( Model, Cmd msg, Maybe User )
 update key msg =
     case msg of
-        UserReceived str ->
-            ( Complete, Route.replaceUrl key Route.Dashboard )
+        UserReceived user ->
+            ( Complete, Route.replaceUrl key <| Route.Dashboard, Just user )
 
 
 

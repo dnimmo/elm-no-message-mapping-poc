@@ -1,4 +1,8 @@
-port module User exposing (..)
+port module User exposing (User, fetchUser, userReceived)
+
+
+type alias User =
+    String
 
 
 port fetchUser : Bool -> Cmd msg
