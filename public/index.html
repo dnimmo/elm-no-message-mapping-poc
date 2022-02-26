@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+
+<body>
+  <main id="root"></main>
+  <script src="/poc.js"></script>
+  <script>
+    const app =
+      Elm.Main.init({
+        node: document.getElementById('root')
+      })
+
+    app.ports.fetchUser.subscribe(sendResponse => {
+        if (sendResponse) {
+            app.ports.userReceived.send("My test user")
+        }
+    })
+  </script>
+</body>
+
+</html>
