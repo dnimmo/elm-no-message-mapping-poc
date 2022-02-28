@@ -53,15 +53,8 @@
         }
         window.localStorage.setItem('savedPocUser', JSON.stringify(updatedUser))
         window.localStorage.setItem('loggedInPocUser', JSON.stringify(updatedUser))
-
-        const check = 
-          JSON.parse(window.localStorage.getItem('savedPocUser'))
-
-        if (updatedUser.name === check.name) { 
-          app.ports.nameChanged.send(true)
-        } else {
-          app.ports.nameChanged.send(false)
-        }
+        
+        app.ports.userReceived.send(updatedUser)
     })
 
     app.ports.signOut.subscribe(() => {

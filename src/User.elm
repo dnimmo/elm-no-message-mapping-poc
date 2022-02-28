@@ -3,7 +3,6 @@ port module User exposing
     , decode
     , errorRetrievingUser
     , fetchUser
-    , nameChanged
     , saveUsername
     , signOut
     , updateName
@@ -60,9 +59,6 @@ port userReceived : (Decode.Value -> msg) -> Sub msg
 
 
 port errorRetrievingUser : (String -> msg) -> Sub msg
-
-
-port nameChanged : (Bool -> msg) -> Sub msg
 
 
 port notLoggedIn : (() -> msg) -> Sub msg

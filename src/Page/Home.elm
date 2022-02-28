@@ -1,12 +1,10 @@
 module Page.Home exposing (Model, Msg, init, subscriptions, update, view)
 
-import Browser.Navigation exposing (Key)
 import Components.Input as Input
 import Components.Layout as Layout
 import Element exposing (..)
-import Json.Decode exposing (Error, decodeValue, errorToString)
 import Route
-import User exposing (User)
+import User
 
 
 
@@ -34,18 +32,17 @@ type Msg
     = UpdateEmail String
     | UpdatePassword String
     | AttemptSignIn
-    | UserReceived (Result Error User)
     | SignInFailed String
 
 
-update : Key -> Msg -> Model -> ( Model, Cmd msg, Maybe User )
-update navKey msg model =
+update : Msg -> Model -> ( Model, Cmd msg )
+update msg model =
     case msg of
         UpdateEmail str ->
-            ( { model | email = str }, Cmd.none, Nothing )
+            ( { model | email = str }, Cmd.none )
 
         UpdatePassword str ->
-            ( { model | password = str }, Cmd.none, Nothing )
+            ( { model | password = str }, Cmd.none )
 
         AttemptSignIn ->
             ( { model | state = Loading }
@@ -53,17 +50,10 @@ update navKey msg model =
                 { email = model.email
                 , password = model.password
                 }
-            , Nothing
             )
 
-        UserReceived (Ok user) ->
-            ( model, Route.replaceUrl navKey <| Route.Dashboard, Just user )
-
-        UserReceived (Err error) ->
-            ( { model | state = ViewingSignInFormWithError <| errorToString error }, Cmd.none, Nothing )
-
         SignInFailed str ->
-            ( { model | state = ViewingSignInFormWithError str }, Cmd.none, Nothing )
+            ( { model | state = ViewingSignInFormWithError str }, Cmd.none )
 
 
 
@@ -117,6 +107,5 @@ init =
 subscriptions : Sub Msg
 subscriptions =
     Sub.batch
-        [ User.userReceived (UserReceived << decodeValue User.decode)
-        , User.errorRetrievingUser SignInFailed
+        [ User.errorRetrievingUser SignInFailed
         ]

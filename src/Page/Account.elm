@@ -1,4 +1,4 @@
-module Page.Account exposing (State, Msg, init, subscriptions, update, view)
+module Page.Account exposing (Msg, State, init, update, view)
 
 import Components.Input as Input
 import Components.Layout as Layout
@@ -27,34 +27,22 @@ type Msg
     | ViewAccount
     | UpdateUsername String
     | AttemptToSaveUsername String
-    | ReceiveUsernameChangeResponse Bool
 
 
-update : User -> State -> Msg -> ( State, Cmd msg, Maybe User )
-update user state msg =
+update : Msg -> ( State, Cmd msg )
+update msg =
     case msg of
         StartEditingUsername ->
-            ( EditingUsername "", Cmd.none, Nothing )
+            ( EditingUsername "", Cmd.none )
 
         ViewAccount ->
-            ( ViewingAccount, Cmd.none, Nothing )
+            ( ViewingAccount, Cmd.none )
 
         UpdateUsername str ->
-            ( EditingUsername str, Cmd.none, Nothing )
+            ( EditingUsername str, Cmd.none )
 
         AttemptToSaveUsername str ->
-            ( Loading str, User.saveUsername str, Nothing )
-
-        ReceiveUsernameChangeResponse True ->
-            case state of
-                Loading str ->
-                    ( ViewingAccount, Cmd.none, Just <| User.updateName str user )
-
-                _ ->
-                    ( Error "Attempted to handle username change outside of the Loading state", Cmd.none, Nothing )
-
-        ReceiveUsernameChangeResponse False ->
-            ( Error "Something went wrong whilst attempting to change your username", Cmd.none, Nothing )
+            ( Loading str, User.saveUsername str )
 
 
 
@@ -141,8 +129,3 @@ view state user =
 init : State
 init =
     ViewingAccount
-
-
-subscriptions : Sub Msg
-subscriptions =
-    User.nameChanged ReceiveUsernameChangeResponse

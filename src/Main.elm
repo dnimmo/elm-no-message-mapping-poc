@@ -4,6 +4,7 @@ import Browser exposing (UrlRequest(..))
 import Browser.Navigation as Nav
 import Components.Layout as Layout
 import Element exposing (..)
+import Json.Decode exposing (decodeValue, errorToString)
 import Page.Account as Account
 import Page.Dashboard as Dashboard
 import Page.Error as Error
@@ -41,6 +42,7 @@ type State
 type Msg
     = UrlChanged Url
     | UrlRequested Browser.UrlRequest
+    | UserReceived (Result Json.Decode.Error User)
     | HomeMsg Home.Msg
     | AccountMsg Account.Msg
 
@@ -86,17 +88,33 @@ handleUrlChange url model =
             )
 
 
+handleUserResponse : Result Json.Decode.Error User -> Model -> ( Model, Cmd Msg )
+handleUserResponse response model =
+    case response of
+        Ok user ->
+            ( { model | user = Just user }
+            , case model.state of
+                ViewingHomePage _ ->
+                    Route.replaceUrl model.navKey Dashboard
+
+                _ ->
+                    Nav.reload
+            )
+
+        Err error ->
+            ( { model | state = ViewingErrorPage <| errorToString error }, Cmd.none )
+
+
 handleHomeMsg : Home.Msg -> Model -> ( Model, Cmd Msg )
 handleHomeMsg msg model =
     case model.state of
         ViewingHomePage homeModel ->
             let
-                ( updatedHomeModel, homeCmd, maybeUser ) =
-                    Home.update model.navKey msg homeModel
+                ( updatedHomeModel, homeCmd ) =
+                    Home.update msg homeModel
             in
             ( { model
                 | state = ViewingHomePage updatedHomeModel
-                , user = maybeUser
               }
             , Cmd.map HomeMsg homeCmd
             )
@@ -109,24 +127,16 @@ handleHomeMsg msg model =
 
 handleAccountMsg : Account.Msg -> Model -> ( Model, Cmd Msg )
 handleAccountMsg msg model =
-    case ( model.state, model.user ) of
-        ( ViewingAccount accountState, Just user ) ->
+    case model.state of
+        ViewingAccount _ ->
             let
-                ( updatedAccountState, accountCmd, maybeUpdatedUser ) =
-                    Account.update user accountState msg
+                ( updatedAccountState, accountCmd ) =
+                    Account.update msg
             in
             ( { model
                 | state = ViewingAccount updatedAccountState
-                , user = Just <| Maybe.withDefault user maybeUpdatedUser
               }
             , accountCmd
-            )
-
-        ( ViewingAccount _, Nothing ) ->
-            ( { model
-                | state = Loading
-              }
-            , Cmd.none
             )
 
         _ ->
@@ -152,6 +162,9 @@ update msg model =
 
                 Browser.External urlString ->
                     ( model, Nav.load urlString )
+
+        UserReceived response ->
+            handleUserResponse response model
 
         HomeMsg homeMsg ->
             handleHomeMsg homeMsg model
@@ -246,7 +259,7 @@ subscriptions : Model -> Sub Msg
 subscriptions _ =
     Sub.batch
         [ Sub.map HomeMsg Home.subscriptions
-        , Sub.map AccountMsg Account.subscriptions
+        , User.userReceived (UserReceived << decodeValue User.decode)
         ]
 
 
