@@ -6,6 +6,10 @@ This is a basic example to play with the idea of using the URL to handle state c
 
 Make sure you have `elm-live` installed (`npm -g elm-live`), and then run `./dev.sh`.
 
+## How can I log in?
+
+Use `test@test.com` and `password1` to access this very secure site. :D 
+
 ## Interesting bits to look at
 
 ### Main.Model 
