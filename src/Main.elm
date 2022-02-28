@@ -231,7 +231,7 @@ init { user } url navKey =
     let
         startingModel =
             { navKey = navKey
-            , state = ViewingHomePage Home.init
+            , state = Loading
             , user = user
             }
 
