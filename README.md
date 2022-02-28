@@ -2,6 +2,10 @@
 
 This is a basic example to play with the idea of using the URL to handle state changes in an Elm application, to avoid situations where you want a "child" state to do some stuff, only to then have a "parent" state do something different when the "child" state meets certain conditions. 
 
+## How can I run this locally? 
+
+Make sure you have `elm-live` installed (`npm -g elm-live`), and then run `./dev.sh`.
+
 ## Interesting bits to look at
 
 ### Main.Model 
