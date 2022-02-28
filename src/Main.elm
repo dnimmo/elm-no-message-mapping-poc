@@ -29,7 +29,7 @@ type State
     = Loading
     | ViewingHomePage Home.Model
     | ViewingDashboard
-    | ViewingAccount Account.Model
+    | ViewingAccount Account.State
     | ViewingSignOut
     | ViewingErrorPage String
 
@@ -110,13 +110,13 @@ handleHomeMsg msg model =
 handleAccountMsg : Account.Msg -> Model -> ( Model, Cmd Msg )
 handleAccountMsg msg model =
     case ( model.state, model.user ) of
-        ( ViewingAccount accountModel, Just user ) ->
+        ( ViewingAccount accountState, Just user ) ->
             let
-                ( updatedAccountModel, accountCmd, maybeUpdatedUser ) =
-                    Account.update user accountModel msg
+                ( updatedAccountState, accountCmd, maybeUpdatedUser ) =
+                    Account.update user accountState msg
             in
             ( { model
-                | state = ViewingAccount updatedAccountModel
+                | state = ViewingAccount updatedAccountState
                 , user = Just <| Maybe.withDefault user maybeUpdatedUser
               }
             , accountCmd

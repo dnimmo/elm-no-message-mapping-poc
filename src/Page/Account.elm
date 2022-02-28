@@ -1,4 +1,4 @@
-module Page.Account exposing (Model, Msg, init, subscriptions, update, view)
+module Page.Account exposing (State, Msg, init, subscriptions, update, view)
 
 import Components.Input as Input
 import Components.Layout as Layout
@@ -8,10 +8,10 @@ import User exposing (User)
 
 
 
--- MODEL
+-- STATE
 
 
-type Model
+type State
     = ViewingAccount
     | EditingUsername String
     | Loading String
@@ -30,8 +30,8 @@ type Msg
     | ReceiveUsernameChangeResponse Bool
 
 
-update : User -> Model -> Msg -> ( Model, Cmd msg, Maybe User )
-update user model msg =
+update : User -> State -> Msg -> ( State, Cmd msg, Maybe User )
+update user state msg =
     case msg of
         StartEditingUsername ->
             ( EditingUsername "", Cmd.none, Nothing )
@@ -46,7 +46,7 @@ update user model msg =
             ( Loading str, User.saveUsername str, Nothing )
 
         ReceiveUsernameChangeResponse True ->
-            case model of
+            case state of
                 Loading str ->
                     ( ViewingAccount, Cmd.none, Just <| User.updateName str user )
 
@@ -102,8 +102,8 @@ errorView str =
         ]
 
 
-view : Model -> User -> Element Msg
-view model user =
+view : State -> User -> Element Msg
+view state user =
     column
         [ spacing 20
         , width fill
@@ -119,7 +119,7 @@ view model user =
             , centerY
             ]
           <|
-            case model of
+            case state of
                 ViewingAccount ->
                     accountView
 
@@ -138,7 +138,7 @@ view model user =
 -- INIT
 
 
-init : Model
+init : State
 init =
     ViewingAccount
 
