@@ -1,12 +1,14 @@
 module Main exposing (..)
 
-import Browser
+import Browser exposing (UrlRequest(..))
 import Browser.Navigation as Nav
+import Components.Layout as Layout
 import Element exposing (..)
+import Page.Account as Account
 import Page.Dashboard as Dashboard
-import Page.DiscoveryForm as DiscoveryForm
 import Page.Error as Error
-import Page.FetchingUser as FetchingUser
+import Page.Home as Home
+import Page.SignOut as SignOut
 import Route exposing (Route(..))
 import Url exposing (Url)
 import User exposing (User)
@@ -25,10 +27,11 @@ type alias Model =
 
 type State
     = Loading
-    | FetchingUser FetchingUser.Model
-    | ViewingDashboard Dashboard.Model
-    | ViewingDiscoveryForm
-    | ViewingErrorPage
+    | ViewingHomePage Home.Model
+    | ViewingDashboard
+    | ViewingAccount Account.Model
+    | ViewingSignOut
+    | ViewingErrorPage String
 
 
 
@@ -38,48 +41,105 @@ type State
 type Msg
     = UrlChanged Url
     | UrlRequested Browser.UrlRequest
-    | FetchingUserMsg FetchingUser.Msg
+    | HomeMsg Home.Msg
+    | AccountMsg Account.Msg
 
 
-fetchUser : Model -> ( Model, Cmd Msg )
-fetchUser model =
-    let
-        ( fetchingUserModel, fetchingUserCmd ) =
-            FetchingUser.init
-    in
+viewHome : Model -> ( Model, Cmd Msg )
+viewHome model =
     ( { model
-        | state = FetchingUser fetchingUserModel
+        | state = ViewingHomePage Home.init
+        , user = Nothing
       }
-    , Cmd.map FetchingUserMsg fetchingUserCmd
+    , Cmd.none
     )
+
+
+handleInitialLanding : Model -> ( Model, Cmd Msg )
+handleInitialLanding model =
+    case model.user of
+        Just _ ->
+            ( model
+            , Route.replaceUrl model.navKey Route.Dashboard
+            )
+
+        Nothing ->
+            viewHome model
 
 
 handleUrlChange : Url -> Model -> ( Model, Cmd Msg )
 handleUrlChange url model =
     case Route.parseRoute url of
         Error ->
-            ( { model | state = ViewingErrorPage }, Cmd.none )
+            ( { model | state = ViewingErrorPage "Page not found" }, Cmd.none )
 
-        Initial ->
-            fetchUser model
-
-        Route.FetchingUser ->
-            fetchUser model
+        Home ->
+            handleInitialLanding model
 
         Dashboard ->
-            case model.user of
-                Just user ->
-                    ( { model
-                        | state = ViewingDashboard <| Dashboard.init user
-                      }
-                    , Cmd.none
-                    )
+            ( { model | state = ViewingDashboard }, Cmd.none )
 
-                Nothing ->
-                    fetchUser model
+        Account ->
+            ( { model | state = ViewingAccount Account.init }, Cmd.none )
 
-        DiscoveryForm ->
-            ( { model | state = ViewingDiscoveryForm }, Cmd.none )
+        SignOut ->
+            ( { model
+                | state = ViewingSignOut
+                , user = Nothing
+              }
+            , User.signOut ()
+            )
+
+
+handleHomeMsg : Home.Msg -> Model -> ( Model, Cmd Msg )
+handleHomeMsg msg model =
+    case model.state of
+        ViewingHomePage homeModel ->
+            let
+                ( updatedHomeModel, homeCmd, maybeUser ) =
+                    Home.update model.navKey msg homeModel
+            in
+            ( { model
+                | state = ViewingHomePage updatedHomeModel
+                , user = maybeUser
+              }
+            , Cmd.map HomeMsg homeCmd
+            )
+
+        _ ->
+            ( { model | state = ViewingErrorPage <| pageStateError "Home" }
+            , Cmd.none
+            )
+
+
+handleAccountMsg : Account.Msg -> Model -> ( Model, Cmd Msg )
+handleAccountMsg msg model =
+    case ( model.state, model.user ) of
+        ( ViewingAccount accountModel, Just user ) ->
+            let
+                ( updatedAccountModel, accountCmd, maybeUpdatedUser ) =
+                    Account.update user accountModel msg
+            in
+            ( { model
+                | state = ViewingAccount updatedAccountModel
+                , user = Just <| Maybe.withDefault user maybeUpdatedUser
+              }
+            , accountCmd
+            )
+
+        ( ViewingAccount _, Nothing ) ->
+            ( { model
+                | state = Loading
+              }
+            , Cmd.none
+            )
+
+        _ ->
+            ( { model
+                | state = ViewingErrorPage <| pageStateError "account"
+              }
+            , Cmd.none
+            )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -88,25 +148,30 @@ update msg model =
         UrlChanged url ->
             handleUrlChange url model
 
-        FetchingUserMsg fetchingUserMsg ->
-            let
-                -- TODO: Refactor here so that we don't need let/in?
-                ( fetchingUserModel, fetchingUserCmd, maybeUser ) =
-                    FetchingUser.update model.navKey fetchingUserMsg
-            in
-            ( { model
-                | state = FetchingUser fetchingUserModel
-                , user = maybeUser
-              }
-            , Cmd.map FetchingUserMsg fetchingUserCmd
-            )
+        UrlRequested urlRequest ->
+            case urlRequest of
+                Browser.Internal url ->
+                    -- This will case `UrlChanged` to be fired, which will then handle the URL change
+                    -- The reason I didn't call handleUrlChange directly here was to ensure that the URL in the address bar is correctly updated
+                    ( model, Route.replaceUrl model.navKey <| Route.parseRoute url )
 
-        _ ->
-            ( model, Cmd.none )
+                Browser.External urlString ->
+                    ( model, Nav.load urlString )
+
+        HomeMsg homeMsg ->
+            handleHomeMsg homeMsg model
+
+        AccountMsg accountMsg ->
+            handleAccountMsg accountMsg model
 
 
 
 -- VIEW
+
+
+pageStateError : String -> String
+pageStateError str =
+    "Attempted to handle " ++ str ++ " message whilst not viewing " ++ str
 
 
 loadingView : Element msg
@@ -114,26 +179,45 @@ loadingView =
     text "Loading..."
 
 
+handleAuthenticatedView : Model -> (User -> Element Msg) -> Element Msg
+handleAuthenticatedView model requestedView =
+    case model.user of
+        Just user ->
+            requestedView user
+
+        Nothing ->
+            Error.view Nothing "No user details received"
+
+
 view : Model -> Browser.Document Msg
 view model =
     { title = "POC"
     , body =
-        [ layout [] <|
-            case model.state of
-                Loading ->
-                    loadingView
+        [ Layout.global <|
+            column [ width fill ]
+                [ Layout.header model.user
+                , Layout.page <|
+                    case model.state of
+                        Loading ->
+                            loadingView
 
-                FetchingUser fetchingUserModel ->
-                    FetchingUser.view fetchingUserModel
+                        ViewingHomePage homeModel ->
+                            Element.map HomeMsg <| Home.view homeModel
 
-                ViewingDashboard dashboardModel ->
-                    Dashboard.view dashboardModel
+                        ViewingDashboard ->
+                            handleAuthenticatedView model Dashboard.view
 
-                ViewingDiscoveryForm ->
-                    DiscoveryForm.view
+                        ViewingAccount accountModel ->
+                            handleAuthenticatedView model <|
+                                Element.map AccountMsg
+                                    << Account.view accountModel
 
-                ViewingErrorPage ->
-                    Error.view
+                        ViewingSignOut ->
+                            SignOut.view
+
+                        ViewingErrorPage str ->
+                            Error.view model.user str
+                ]
         ]
     }
 
@@ -143,12 +227,12 @@ view model =
 
 
 init : Flags -> Url -> Nav.Key -> ( Model, Cmd Msg )
-init _ url navKey =
+init { user } url navKey =
     let
         startingModel =
             { navKey = navKey
-            , state = Loading
-            , user = Nothing
+            , state = ViewingHomePage Home.init
+            , user = user
             }
 
         ( initialModel, initialCmd ) =
@@ -160,12 +244,15 @@ init _ url navKey =
 
 
 type alias Flags =
-    ()
+    { user : Maybe User }
 
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    Sub.map FetchingUserMsg FetchingUser.subscriptions
+    Sub.batch
+        [ Sub.map HomeMsg Home.subscriptions
+        , Sub.map AccountMsg Account.subscriptions
+        ]
 
 
 main : Program Flags Model Msg

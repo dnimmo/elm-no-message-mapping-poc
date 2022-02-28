@@ -1,27 +1,34 @@
-module Route exposing (Route(..), parseRoute, parser, renderRoute, replaceUrl)
+module Route exposing
+    ( Route(..)
+    , pageTitle
+    , parseRoute
+    , parser
+    , renderRoute
+    , replaceUrl
+    , toString
+    )
 
 import Browser.Navigation as Nav
 import Url exposing (Url)
 import Url.Builder exposing (absolute)
 import Url.Parser exposing ((</>), (<?>), Parser, map, oneOf, parse, s, top)
-import User exposing (User)
 
 
 type Route
-    = Initial
-    | FetchingUser
+    = Home
     | Dashboard
-    | DiscoveryForm
+    | Account
+    | SignOut
     | Error
 
 
 parser : Parser (Route -> Route) Route
 parser =
     oneOf
-        [ map Initial top
-        , map FetchingUser <| s "fetching-user"
+        [ map Home top
         , map Dashboard <| s "dashboard"
-        , map DiscoveryForm <| s "discovery"
+        , map Account <| s "account"
+        , map SignOut <| s "sign-out"
         , map Error <| s "error"
         ]
 
@@ -29,17 +36,17 @@ parser =
 renderRoute : Route -> String
 renderRoute route =
     case route of
-        Initial ->
+        Home ->
             absolute [ "" ] []
-
-        FetchingUser ->
-            absolute [ "fetching-user" ] []
 
         Dashboard ->
             absolute [ "dashboard" ] []
 
-        DiscoveryForm ->
-            absolute [ "discovery" ] []
+        Account ->
+            absolute [ "account" ] []
+
+        SignOut ->
+            absolute [ "sign-out" ] []
 
         Error ->
             absolute [ "error" ] []
@@ -53,3 +60,41 @@ parseRoute url =
 replaceUrl : Nav.Key -> Route -> Cmd msg
 replaceUrl key route =
     Nav.replaceUrl key <| renderRoute route
+
+
+toString : Route -> String
+toString route =
+    case route of
+        Home ->
+            "/"
+
+        Dashboard ->
+            "/dashboard"
+
+        Account ->
+            "/account"
+
+        SignOut ->
+            "/sign-out"
+
+        Error ->
+            "/error"
+
+
+pageTitle : Route -> String
+pageTitle route =
+    case route of
+        Home ->
+            "Sign in"
+
+        Dashboard ->
+            "Dashboard"
+
+        Account ->
+            "My account"
+
+        SignOut ->
+            "Signed out successfully"
+
+        Error ->
+            "Error"

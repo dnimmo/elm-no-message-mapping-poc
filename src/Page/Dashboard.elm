@@ -1,49 +1,20 @@
-module Page.Dashboard exposing (Model, Msg, init, update, view)
+module Page.Dashboard exposing (view)
 
+import Components.Layout as Layout
 import Element exposing (..)
+import Route
 import User exposing (User)
 
 
-
--- MODEL
-
-
-type Model
-    = ViewingDashboard User
-    | Error
-
-
-
--- UPDATE
-
-
-type Msg
-    = SignOut
-
-
-update : Msg -> Model -> ( Model, Cmd Msg )
-update msg model =
-    ( model, Cmd.none )
-
-
-
--- VIEW
-
-
-view : Model -> Element msg
-view model =
-    case model of
-        ViewingDashboard user ->
-            text <| "Welcome " ++ user ++ "!"
-
-        Error ->
-            text "Hmm, not sure you're allowed 'round these parts."
-
-
-
--- INIT
-
-
-init : User -> Model
-init user =
-    ViewingDashboard user
+view : User -> Element msg
+view user =
+    column
+        [ spacing 20
+        , width fill
+        ]
+        [ Layout.pageHeader
+            { currentRoute = Route.Dashboard
+            , parentRoute = Nothing
+            }
+        , text <| "Welcome " ++ user.name ++ "!"
+        ]

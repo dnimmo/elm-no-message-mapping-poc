@@ -10,16 +10,65 @@
   <main id="root"></main>
   <script src="/poc.js"></script>
   <script>
+    const loggedInUser = 
+      JSON.parse(window.localStorage.getItem('loggedInPocUser'))
+
+    const savedUser =
+      JSON.parse(window.localStorage.getItem('savedPocUser'))
+
+    if (!savedUser) {
+      // Cheap hack - just save the dummy user immediately if there isn't one there already
+      // Can't be bothered to add anything more intricate for this demonstration
+      window.localStorage.setItem('savedPocUser', JSON.stringify(
+        { name : "Test User"
+        , email : "test@test.com"
+        , password : "password1"
+        , userId : 1
+        })
+      )
+    }
+
     const app =
       Elm.Main.init({
-        node: document.getElementById('root')
+        node: document.getElementById('root'),
+        flags: { user: loggedInUser }
       })
 
-    app.ports.fetchUser.subscribe(sendResponse => {
-        if (sendResponse) {
-            app.ports.userReceived.send("My test user")
+    app.ports.fetchUser.subscribe(({ email, password }) => {
+        const storedUser = 
+          JSON.parse(window.localStorage.getItem('savedPocUser'))
+
+        if (storedUser && email === storedUser.email && password === storedUser.password ) {
+            window.localStorage.setItem('loggedInPocUser', JSON.stringify(storedUser))
+            app.ports.userReceived.send(storedUser)
+        } else {
+            app.ports.errorRetrievingUser.send("No user found")
         }
     })
+
+    app.ports.saveUsername.subscribe(newUsername => {
+      const updatedUser = 
+        { ...savedUser
+        , name : newUsername
+        }
+        window.localStorage.setItem('savedPocUser', JSON.stringify(updatedUser))
+        window.localStorage.setItem('loggedInPocUser', JSON.stringify(updatedUser))
+
+        const check = 
+          JSON.parse(window.localStorage.getItem('savedPocUser'))
+
+        if (updatedUser.name === check.name) { 
+          app.ports.nameChanged.send(true)
+        } else {
+          app.ports.nameChanged.send(false)
+        }
+    })
+
+    app.ports.signOut.subscribe(() => {
+      window.localStorage.removeItem('loggedInPocUser')
+    })
+
+
   </script>
 </body>
 
