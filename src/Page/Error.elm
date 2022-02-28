@@ -1,6 +1,5 @@
 module Page.Error exposing (view)
 
-import Components.Navigation as Nav
 import Element exposing (..)
 import Route
 import User exposing (User)
@@ -14,14 +13,14 @@ view : Maybe User -> String -> Element msg
 view maybeUser str =
     column [ spacing 20 ]
         [ text <| "Something has gone wrong: " ++ str
-        , Nav.link
-            { url =
+        , Route.link
+            { route =
                 case maybeUser of
                     Just _ ->
-                        Route.toString Route.Dashboard
+                        Route.Dashboard
 
                     Nothing ->
-                        Route.toString Route.Home
+                        Route.Home
             , labelText = "< Go back"
             }
         ]

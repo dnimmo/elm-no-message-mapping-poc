@@ -1,5 +1,6 @@
 module Route exposing
     ( Route(..)
+    , link
     , pageTitle
     , parseRoute
     , parser
@@ -9,9 +10,11 @@ module Route exposing
     )
 
 import Browser.Navigation as Nav
+import Element exposing (Element, text)
+import Element.Border as Border
 import Url exposing (Url)
 import Url.Builder exposing (absolute)
-import Url.Parser exposing ((</>), (<?>), Parser, map, oneOf, parse, s, top)
+import Url.Parser exposing ((</>), Parser, map, oneOf, parse, s, top)
 
 
 type Route
@@ -22,14 +25,39 @@ type Route
     | Error
 
 
+homeString : String
+homeString =
+    ""
+
+
+dashboardString : String
+dashboardString =
+    "dashboard"
+
+
+accountString : String
+accountString =
+    "account"
+
+
+signOutString : String
+signOutString =
+    "sign-out"
+
+
+errorString : String
+errorString =
+    "error"
+
+
 parser : Parser (Route -> Route) Route
 parser =
     oneOf
         [ map Home top
-        , map Dashboard <| s "dashboard"
-        , map Account <| s "account"
-        , map SignOut <| s "sign-out"
-        , map Error <| s "error"
+        , map Dashboard <| s dashboardString
+        , map Account <| s accountString
+        , map SignOut <| s signOutString
+        , map Error <| s errorString
         ]
 
 
@@ -37,19 +65,19 @@ renderRoute : Route -> String
 renderRoute route =
     case route of
         Home ->
-            absolute [ "" ] []
+            absolute [ homeString ] []
 
         Dashboard ->
-            absolute [ "dashboard" ] []
+            absolute [ dashboardString ] []
 
         Account ->
-            absolute [ "account" ] []
+            absolute [ accountString ] []
 
         SignOut ->
-            absolute [ "sign-out" ] []
+            absolute [ signOutString ] []
 
         Error ->
-            absolute [ "error" ] []
+            absolute [ errorString ] []
 
 
 parseRoute : Url -> Route
@@ -64,21 +92,23 @@ replaceUrl key route =
 
 toString : Route -> String
 toString route =
-    case route of
-        Home ->
-            "/"
+    "/"
+        ++ (case route of
+                Home ->
+                    homeString
 
-        Dashboard ->
-            "/dashboard"
+                Dashboard ->
+                    dashboardString
 
-        Account ->
-            "/account"
+                Account ->
+                    accountString
 
-        SignOut ->
-            "/sign-out"
+                SignOut ->
+                    signOutString
 
-        Error ->
-            "/error"
+                Error ->
+                    errorString
+           )
 
 
 pageTitle : Route -> String
@@ -98,3 +128,16 @@ pageTitle route =
 
         Error ->
             "Error"
+
+
+link : { route : Route, labelText : String } -> Element msg
+link { route, labelText } =
+    Element.link
+        [ Border.widthEach
+            { top = 0
+            , left = 0
+            , right = 0
+            , bottom = 1
+            }
+        ]
+        { url = toString route, label = text labelText }

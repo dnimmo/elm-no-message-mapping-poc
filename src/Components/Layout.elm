@@ -1,7 +1,6 @@
 module Components.Layout exposing (global, header, page, pageHeader)
 
 import Components.Colours as Colours
-import Components.Navigation as Nav
 import Element exposing (..)
 import Element.Background as Background
 import Element.Border as Border
@@ -45,16 +44,15 @@ siteTitle : Maybe User -> Element msg
 siteTitle maybeUser =
     el [ width fill ] <|
         el [ centerX ] <|
-            Nav.link
+            Route.link
                 { labelText = "Architecture POC"
-                , url =
-                    Route.toString <|
-                        case maybeUser of
-                            Just _ ->
-                                Route.Dashboard
+                , route =
+                    case maybeUser of
+                        Just _ ->
+                            Route.Dashboard
 
-                            Nothing ->
-                                Route.Home
+                        Nothing ->
+                            Route.Home
                 }
 
 
@@ -77,14 +75,14 @@ authenticatedHeader user =
             , spacing 20
             ]
             [ el [ alignRight ] <|
-                Nav.link
+                Route.link
                     { labelText = "My account"
-                    , url = Route.toString Route.Account
+                    , route = Route.Account
                     }
             , el [ alignRight ] <|
-                Nav.link
+                Route.link
                     { labelText = "Sign out"
-                    , url = Route.toString Route.SignOut
+                    , route = Route.SignOut
                     }
             ]
         ]
@@ -105,9 +103,9 @@ pageHeader { currentRoute, parentRoute } =
         [ el [ width fill ] <|
             case parentRoute of
                 Just route ->
-                    Nav.link
+                    Route.link
                         { labelText = "< " ++ Route.pageTitle route
-                        , url = Route.toString route
+                        , route = route
                         }
 
                 Nothing ->
