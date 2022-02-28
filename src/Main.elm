@@ -45,16 +45,6 @@ type Msg
     | AccountMsg Account.Msg
 
 
-viewHome : Model -> ( Model, Cmd Msg )
-viewHome model =
-    ( { model
-        | state = ViewingHomePage Home.init
-        , user = Nothing
-      }
-    , Cmd.none
-    )
-
-
 handleInitialLanding : Model -> ( Model, Cmd Msg )
 handleInitialLanding model =
     case model.user of
@@ -64,7 +54,12 @@ handleInitialLanding model =
             )
 
         Nothing ->
-            viewHome model
+            ( { model
+                | state = ViewingHomePage Home.init
+                , user = Nothing
+              }
+            , Cmd.none
+            )
 
 
 handleUrlChange : Url -> Model -> ( Model, Cmd Msg )
