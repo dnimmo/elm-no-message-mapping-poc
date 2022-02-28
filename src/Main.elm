@@ -151,7 +151,7 @@ update msg model =
         UrlRequested urlRequest ->
             case urlRequest of
                 Browser.Internal url ->
-                    -- This will case `UrlChanged` to be fired, which will then handle the URL change
+                    -- This will cause `UrlChanged` to be fired, which will then handle the URL change
                     -- The reason I didn't call handleUrlChange directly here was to ensure that the URL in the address bar is correctly updated
                     ( model, Route.replaceUrl model.navKey <| Route.parseRoute url )
 
