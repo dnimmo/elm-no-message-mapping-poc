@@ -23,7 +23,3 @@ Records all the possible routes, and acts as the go-to module for anything to do
 ### Main.handleUrlChange
 
 As the name suggests, this function handles changes to the URL. The URL is parsed into a `Route`, and the state is updated depending on the Route in question. In the case of the `Home` Route, this redirects to the `Dashboard` Route if there's a user logged in already.
-
-### Page.Account.update 
-
-This function returns an updated `Account.Model`, a `Cmd Account.Msg`, and a `Maybe User`. The `Maybe User` is used to flag any updates to the logged in User that happen whilst the User is in the `Account` page. If this function returns `Just User`, then the User stored in `Main.Model` is replaced. Otherwise, the User that was already in `Main.Model` is retained.  
