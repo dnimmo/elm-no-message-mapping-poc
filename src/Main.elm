@@ -22,7 +22,7 @@ import User exposing (User)
 type alias Model =
     { navKey : Nav.Key
     , state : State
-    , user : Maybe User
+    , user : User.Model
     }
 
 
@@ -49,19 +49,17 @@ type Msg
 
 handleInitialLanding : Model -> ( Model, Cmd Msg )
 handleInitialLanding model =
-    case model.user of
-        Just _ ->
-            ( model
-            , Route.replaceUrl model.navKey Route.Dashboard
-            )
+    if User.isLoggedIn model.user then
+        ( model
+        , Route.replaceUrl model.navKey Route.Dashboard
+        )
 
-        Nothing ->
-            ( { model
-                | state = ViewingHomePage Home.init
-                , user = Nothing
-              }
-            , Cmd.none
-            )
+    else
+        ( { model
+            | state = ViewingHomePage Home.init
+          }
+        , Cmd.none
+        )
 
 
 handleUrlChange : Url -> Model -> ( Model, Cmd Msg )
@@ -82,7 +80,7 @@ handleUrlChange url model =
         SignOut ->
             ( { model
                 | state = ViewingSignOut
-                , user = Nothing
+                , user = User.init Nothing
               }
             , User.signOut ()
             )
@@ -92,7 +90,7 @@ handleUserResponse : Result Json.Decode.Error User -> Model -> ( Model, Cmd Msg 
 handleUserResponse response model =
     case response of
         Ok user ->
-            ( { model | user = Just user }
+            ( { model | user = User.init <| Just user }
             , case model.state of
                 ViewingHomePage _ ->
                     Route.replaceUrl model.navKey Dashboard
@@ -189,12 +187,12 @@ loadingView =
 
 handleAuthenticatedView : Model -> (User -> Element Msg) -> Element Msg
 handleAuthenticatedView model requestedView =
-    case model.user of
+    case User.getUser model.user of
         Just user ->
             requestedView user
 
         Nothing ->
-            Error.view Nothing "No user details received"
+            Error.view model.user "No user details received"
 
 
 view : Model -> Browser.Document Msg
@@ -240,7 +238,7 @@ init { user } url navKey =
         startingModel =
             { navKey = navKey
             , state = Loading
-            , user = user
+            , user = User.init user
             }
 
         ( initialModel, initialCmd ) =

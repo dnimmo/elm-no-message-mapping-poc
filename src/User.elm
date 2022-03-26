@@ -1,8 +1,12 @@
 port module User exposing
-    ( User
+    ( Model
+    , User
     , decode
     , errorRetrievingUser
     , fetchUser
+    , getUser
+    , init
+    , isLoggedIn
     , saveUsername
     , signOut
     , updateName
@@ -10,6 +14,15 @@ port module User exposing
     )
 
 import Json.Decode as Decode exposing (Decoder, field, int, string)
+
+
+
+-- MODEL
+
+
+type Model
+    = NotLoggedIn
+    | LoggedIn User
 
 
 type alias User =
@@ -23,6 +36,21 @@ type alias User =
 updateName : String -> User -> User
 updateName newName user =
     { user | name = newName }
+
+
+isLoggedIn : Model -> Bool
+isLoggedIn model =
+    model /= NotLoggedIn
+
+
+getUser : Model -> Maybe User
+getUser model =
+    case model of
+        NotLoggedIn ->
+            Nothing
+
+        LoggedIn user ->
+            Just user
 
 
 
@@ -62,3 +90,17 @@ port errorRetrievingUser : (String -> msg) -> Sub msg
 
 
 port notLoggedIn : (() -> msg) -> Sub msg
+
+
+
+-- INIT
+
+
+init : Maybe User -> Model
+init maybeUser =
+    case maybeUser of
+        Just user ->
+            LoggedIn user
+
+        Nothing ->
+            NotLoggedIn

@@ -18,8 +18,8 @@ global =
         ]
 
 
-header : Maybe User -> Element msg
-header maybeUser =
+header : User.Model -> Element msg
+header userModel =
     el
         [ padding 20
         , width fill
@@ -32,7 +32,7 @@ header maybeUser =
             }
         ]
     <|
-        case maybeUser of
+        case User.getUser userModel of
             Just user ->
                 authenticatedHeader user
 
