@@ -1,14 +1,26 @@
-module Page.Account exposing (Msg, State, init, update, view)
+module Page.Account exposing
+    ( Model
+    , Msg
+    , init
+    , subscriptions
+    , update
+    , view
+    )
 
 import Components.Input as Input
 import Components.Layout as Layout
 import Element exposing (..)
+import Json.Decode as Decode
 import Route
 import User exposing (User)
 
 
 
--- STATE
+-- MODEL
+
+
+type Model
+    = Model User State
 
 
 type State
@@ -27,22 +39,96 @@ type Msg
     | ViewAccount
     | UpdateUsername String
     | AttemptToSaveUsername String
+    | UserUpdated (Result Decode.Error User)
 
 
-update : Msg -> ( State, Cmd msg )
-update msg =
+handleStartEditingUsername : Model -> Model
+handleStartEditingUsername (Model user state) =
+    case state of
+        ViewingAccount ->
+            Model user <| EditingUsername ""
+
+        _ ->
+            Model user <| Error "Attempted to start editing username outside of ViewingAccount"
+
+
+handleViewAccount : Model -> Model
+handleViewAccount (Model user state) =
+    case state of
+        EditingUsername _ ->
+            Model user ViewingAccount
+
+        _ ->
+            Model user <| Error "Attempted to view account outside of EditingUsername"
+
+
+handleUpdateUsername : Model -> String -> Model
+handleUpdateUsername (Model user state) str =
+    case state of
+        EditingUsername _ ->
+            Model user <| EditingUsername str
+
+        _ ->
+            Model user <| Error "Attempted to update username outside of EditingUsername"
+
+
+handleAttemptToSaveUsername : Model -> String -> ( Model, Cmd Msg )
+handleAttemptToSaveUsername (Model user state) str =
+    case state of
+        EditingUsername _ ->
+            ( Model user <| Loading str
+            , User.saveUsername str
+            )
+
+        _ ->
+            ( Model user <| Error "Attempted to save username outside of EditingUsername"
+            , Cmd.none
+            )
+
+
+handleUserUpdated : Model -> Result Decode.Error User -> Model
+handleUserUpdated (Model user state) result =
+    case state of
+        Loading _ ->
+            case result of
+                Ok _ ->
+                    Model user ViewingAccount
+
+                Err err ->
+                    Model user <|
+                        Error <|
+                            Decode.errorToString err
+
+        _ ->
+            Model user <|
+                Error "Attempted to handle user response outside of Loading"
+
+
+update : Msg -> Model -> ( Model, Cmd Msg )
+update msg model =
     case msg of
         StartEditingUsername ->
-            ( EditingUsername "", Cmd.none )
+            ( handleStartEditingUsername model
+            , Cmd.none
+            )
 
         ViewAccount ->
-            ( ViewingAccount, Cmd.none )
+            ( handleViewAccount model
+            , Cmd.none
+            )
 
         UpdateUsername str ->
-            ( EditingUsername str, Cmd.none )
+            ( handleUpdateUsername model str
+            , Cmd.none
+            )
 
         AttemptToSaveUsername str ->
-            ( Loading str, User.saveUsername str )
+            handleAttemptToSaveUsername model str
+
+        UserUpdated result ->
+            ( handleUserUpdated model result
+            , Cmd.none
+            )
 
 
 
@@ -90,8 +176,8 @@ errorView str =
         ]
 
 
-view : State -> User -> Element Msg
-view state user =
+view : Model -> Element Msg
+view (Model user state) =
     column
         [ spacing 20
         , width fill
@@ -126,6 +212,13 @@ view state user =
 -- INIT
 
 
-init : State
-init =
-    ViewingAccount
+init : User -> Model
+init user =
+    Model user ViewingAccount
+
+
+subscriptions : Sub Msg
+subscriptions =
+    User.storedUserUpdated <|
+        UserUpdated
+            << Decode.decodeValue User.decode

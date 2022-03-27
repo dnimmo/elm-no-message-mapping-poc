@@ -1,5 +1,6 @@
 port module User exposing
     ( Model
+    , Msg
     , User
     , decode
     , errorRetrievingUser
@@ -9,6 +10,11 @@ port module User exposing
     , isLoggedIn
     , saveUsername
     , signOut
+    , signOutAttemptFailed
+    , signedOutSuccessfully
+    , storedUserUpdated
+    , subscriptions
+    , update
     , updateName
     , userReceived
     )
@@ -54,6 +60,29 @@ getUser model =
 
 
 
+-- UPDATE
+
+
+type Msg
+    = StoredUserUpdated (Result Decode.Error User)
+    | LoggedOut ()
+
+
+update : Msg -> Model -> Model
+update msg model =
+    case msg of
+        LoggedOut _ ->
+            NotLoggedIn
+
+        StoredUserUpdated (Ok user) ->
+            LoggedIn user
+
+        -- TODO Re-route to error page in this scenario
+        StoredUserUpdated (Err _) ->
+            NotLoggedIn
+
+
+
 -- DECODE
 
 
@@ -89,7 +118,13 @@ port userReceived : (Decode.Value -> msg) -> Sub msg
 port errorRetrievingUser : (String -> msg) -> Sub msg
 
 
-port notLoggedIn : (() -> msg) -> Sub msg
+port signedOutSuccessfully : (() -> msg) -> Sub msg
+
+
+port signOutAttemptFailed : (String -> msg) -> Sub msg
+
+
+port storedUserUpdated : (Decode.Value -> msg) -> Sub msg
 
 
 
@@ -104,3 +139,17 @@ init maybeUser =
 
         Nothing ->
             NotLoggedIn
+
+
+storedUserUpdatedMsg : Decode.Value -> Msg
+storedUserUpdatedMsg =
+    StoredUserUpdated << Decode.decodeValue decode
+
+
+subscriptions : Sub Msg
+subscriptions =
+    Sub.batch
+        [ storedUserUpdated storedUserUpdatedMsg
+        , signedOutSuccessfully LoggedOut
+        , userReceived storedUserUpdatedMsg
+        ]

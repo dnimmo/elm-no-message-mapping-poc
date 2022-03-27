@@ -4,8 +4,8 @@ module Route exposing
     , pageTitle
     , parseRoute
     , parser
+    , pushUrl
     , renderRoute
-    , replaceUrl
     , toString
     )
 
@@ -85,9 +85,9 @@ parseRoute url =
     Maybe.withDefault Error <| parse parser url
 
 
-replaceUrl : Nav.Key -> Route -> Cmd msg
-replaceUrl key route =
-    Nav.replaceUrl key <| renderRoute route
+pushUrl : Nav.Key -> Route -> Cmd msg
+pushUrl key route =
+    Nav.pushUrl key <| renderRoute route
 
 
 toString : Route -> String

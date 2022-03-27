@@ -29,9 +29,9 @@ type alias Model =
 type State
     = Loading
     | ViewingHomePage Home.Model
-    | ViewingDashboard
-    | ViewingAccount Account.State
-    | ViewingSignOut
+    | ViewingDashboard Dashboard.Model
+    | ViewingAccount Account.Model
+    | ViewingSignOut SignOut.Model
     | ViewingErrorPage String
 
 
@@ -42,16 +42,17 @@ type State
 type Msg
     = UrlChanged Url
     | UrlRequested Browser.UrlRequest
-    | UserReceived (Result Json.Decode.Error User)
+    | UserMsg User.Msg
     | HomeMsg Home.Msg
     | AccountMsg Account.Msg
+    | SignOutMsg SignOut.Msg
 
 
 handleInitialLanding : Model -> ( Model, Cmd Msg )
 handleInitialLanding model =
     if User.isLoggedIn model.user then
         ( model
-        , Route.replaceUrl model.navKey Route.Dashboard
+        , Route.pushUrl model.navKey Route.Dashboard
         )
 
     else
@@ -66,41 +67,69 @@ handleUrlChange : Url -> Model -> ( Model, Cmd Msg )
 handleUrlChange url model =
     case Route.parseRoute url of
         Error ->
-            ( { model | state = ViewingErrorPage "Page not found" }, Cmd.none )
+            ( { model
+                | state = ViewingErrorPage "Page not found"
+              }
+            , Cmd.none
+            )
 
         Home ->
             handleInitialLanding model
 
         Dashboard ->
-            ( { model | state = ViewingDashboard }, Cmd.none )
+            case User.getUser model.user of
+                Just user ->
+                    ( { model
+                        | state =
+                            ViewingDashboard <|
+                                Dashboard.init user
+                      }
+                    , Cmd.none
+                    )
+
+                Nothing ->
+                    ( model
+                    , Route.pushUrl model.navKey Route.Error
+                    )
 
         Account ->
-            ( { model | state = ViewingAccount Account.init }, Cmd.none )
+            case User.getUser model.user of
+                Just user ->
+                    ( { model
+                        | state = ViewingAccount <| Account.init user
+                      }
+                    , Cmd.none
+                    )
+
+                Nothing ->
+                    ( model
+                    , Route.pushUrl model.navKey Route.Error
+                    )
 
         SignOut ->
-            ( { model
-                | state = ViewingSignOut
-                , user = User.init Nothing
-              }
-            , User.signOut ()
-            )
+            case User.getUser model.user of
+                Just user ->
+                    let
+                        ( signOutModel, signOutCmd ) =
+                            SignOut.init user
+                    in
+                    ( { model
+                        | state = ViewingSignOut signOutModel
+                      }
+                    , Cmd.map SignOutMsg signOutCmd
+                    )
+
+                Nothing ->
+                    ( model
+                    , Route.pushUrl model.navKey Route.Error
+                    )
 
 
-handleUserResponse : Result Json.Decode.Error User -> Model -> ( Model, Cmd Msg )
-handleUserResponse response model =
-    case response of
-        Ok user ->
-            ( { model | user = User.init <| Just user }
-            , case model.state of
-                ViewingHomePage _ ->
-                    Route.replaceUrl model.navKey Dashboard
-
-                _ ->
-                    Nav.reload
-            )
-
-        Err error ->
-            ( { model | state = ViewingErrorPage <| errorToString error }, Cmd.none )
+handleUserMsg : User.Msg -> Model -> Model
+handleUserMsg msg model =
+    { model
+        | user = User.update msg model.user
+    }
 
 
 handleHomeMsg : Home.Msg -> Model -> ( Model, Cmd Msg )
@@ -109,7 +138,7 @@ handleHomeMsg msg model =
         ViewingHomePage homeModel ->
             let
                 ( updatedHomeModel, homeCmd ) =
-                    Home.update msg homeModel
+                    Home.update msg homeModel model.navKey
             in
             ( { model
                 | state = ViewingHomePage updatedHomeModel
@@ -126,15 +155,15 @@ handleHomeMsg msg model =
 handleAccountMsg : Account.Msg -> Model -> ( Model, Cmd Msg )
 handleAccountMsg msg model =
     case model.state of
-        ViewingAccount _ ->
+        ViewingAccount accountModel ->
             let
                 ( updatedAccountState, accountCmd ) =
-                    Account.update msg
+                    Account.update msg accountModel
             in
             ( { model
                 | state = ViewingAccount updatedAccountState
               }
-            , accountCmd
+            , Cmd.map AccountMsg accountCmd
             )
 
         _ ->
@@ -142,6 +171,24 @@ handleAccountMsg msg model =
                 | state = ViewingErrorPage <| pageStateError "account"
               }
             , Cmd.none
+            )
+
+
+handleSignOutMsg : SignOut.Msg -> Model -> ( Model, Cmd Msg )
+handleSignOutMsg msg model =
+    case model.state of
+        ViewingSignOut signOutModel ->
+            let
+                ( updatedSignOutModel, signOutCmd ) =
+                    SignOut.update msg signOutModel model.navKey
+            in
+            ( { model | state = ViewingSignOut updatedSignOutModel }
+            , Cmd.map SignOutMsg signOutCmd
+            )
+
+        _ ->
+            ( model
+            , Route.pushUrl model.navKey Route.Error
             )
 
 
@@ -156,19 +203,24 @@ update msg model =
                 Browser.Internal url ->
                     -- This will cause `UrlChanged` to be fired, which will then handle the URL change
                     -- The reason I didn't call handleUrlChange directly here was to ensure that the URL in the address bar is correctly updated
-                    ( model, Route.replaceUrl model.navKey <| Route.parseRoute url )
+                    ( model, Route.pushUrl model.navKey <| Route.parseRoute url )
 
                 Browser.External urlString ->
                     ( model, Nav.load urlString )
 
-        UserReceived response ->
-            handleUserResponse response model
+        UserMsg userMsg ->
+            ( handleUserMsg userMsg model
+            , Cmd.none
+            )
 
         HomeMsg homeMsg ->
             handleHomeMsg homeMsg model
 
         AccountMsg accountMsg ->
             handleAccountMsg accountMsg model
+
+        SignOutMsg signOutMsg ->
+            handleSignOutMsg signOutMsg model
 
 
 
@@ -185,16 +237,6 @@ loadingView =
     text "Loading..."
 
 
-handleAuthenticatedView : Model -> (User -> Element Msg) -> Element Msg
-handleAuthenticatedView model requestedView =
-    case User.getUser model.user of
-        Just user ->
-            requestedView user
-
-        Nothing ->
-            Error.view model.user "No user details received"
-
-
 view : Model -> Browser.Document Msg
 view model =
     { title = "POC"
@@ -208,18 +250,18 @@ view model =
                             loadingView
 
                         ViewingHomePage homeModel ->
-                            Element.map HomeMsg <| Home.view homeModel
+                            Element.map HomeMsg <|
+                                Home.view homeModel
 
-                        ViewingDashboard ->
-                            handleAuthenticatedView model Dashboard.view
+                        ViewingDashboard dashboardModel ->
+                            Dashboard.view dashboardModel
 
                         ViewingAccount accountModel ->
-                            handleAuthenticatedView model <|
-                                Element.map AccountMsg
-                                    << Account.view accountModel
+                            Element.map AccountMsg <|
+                                Account.view accountModel
 
-                        ViewingSignOut ->
-                            SignOut.view
+                        ViewingSignOut signOutModel ->
+                            SignOut.view signOutModel
 
                         ViewingErrorPage str ->
                             Error.view model.user str
@@ -256,8 +298,10 @@ type alias Flags =
 subscriptions : Model -> Sub Msg
 subscriptions _ =
     Sub.batch
-        [ Sub.map HomeMsg Home.subscriptions
-        , User.userReceived (UserReceived << decodeValue User.decode)
+        [ Sub.map UserMsg User.subscriptions
+        , Sub.map HomeMsg Home.subscriptions
+        , Sub.map AccountMsg Account.subscriptions
+        , Sub.map SignOutMsg SignOut.subscriptions
         ]
 
 

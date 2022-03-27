@@ -54,11 +54,16 @@
         window.localStorage.setItem('savedPocUser', JSON.stringify(updatedUser))
         window.localStorage.setItem('loggedInPocUser', JSON.stringify(updatedUser))
         
-        app.ports.userReceived.send(updatedUser)
+        app.ports.storedUserUpdated.send(updatedUser)
     })
 
     app.ports.signOut.subscribe(() => {
-      window.localStorage.removeItem('loggedInPocUser')
+      try {
+        window.localStorage.removeItem('loggedInPocUser')
+        app.ports.signedOutSuccessfully.send(null)
+      } catch (err) {
+        app.ports.signOutAttemptFailed.send(err.message)
+      }
     })
 
 
