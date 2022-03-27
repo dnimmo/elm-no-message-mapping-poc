@@ -13,8 +13,9 @@ import Browser.Navigation as Nav
 import Element exposing (Element, text)
 import Element.Border as Border
 import Url exposing (Url)
-import Url.Builder exposing (absolute)
-import Url.Parser exposing ((</>), Parser, map, oneOf, parse, s, top)
+import Url.Builder as Builder exposing (absolute)
+import Url.Parser as Parser exposing ((<?>), Parser, map, oneOf, parse, s, top)
+import Url.Parser.Query as Query
 
 
 type Route
@@ -22,7 +23,7 @@ type Route
     | Dashboard
     | Account
     | SignOut
-    | Error
+    | Error (Maybe String)
 
 
 homeString : String
@@ -57,7 +58,7 @@ parser =
         , map Dashboard <| s dashboardString
         , map Account <| s accountString
         , map SignOut <| s signOutString
-        , map Error <| s errorString
+        , map Error <| s errorString <?> Query.string "message"
         ]
 
 
@@ -76,13 +77,16 @@ renderRoute route =
         SignOut ->
             absolute [ signOutString ] []
 
-        Error ->
-            absolute [ errorString ] []
+        Error errorStr ->
+            absolute [ errorString ]
+                [ Builder.string "message" <|
+                    Maybe.withDefault "No message received" errorStr
+                ]
 
 
 parseRoute : Url -> Route
 parseRoute url =
-    Maybe.withDefault Error <| parse parser url
+    Maybe.withDefault (Error <| Just "Route not found") <| parse parser url
 
 
 pushUrl : Nav.Key -> Route -> Cmd msg
@@ -106,7 +110,7 @@ toString route =
                 SignOut ->
                     signOutString
 
-                Error ->
+                Error _ ->
                     errorString
            )
 
@@ -126,7 +130,7 @@ pageTitle route =
         SignOut ->
             "Signed out successfully"
 
-        Error ->
+        Error _ ->
             "Error"
 
 

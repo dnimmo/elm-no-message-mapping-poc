@@ -66,9 +66,9 @@ handleInitialLanding model =
 handleUrlChange : Url -> Model -> ( Model, Cmd Msg )
 handleUrlChange url model =
     case Route.parseRoute url of
-        Error ->
+        Error str ->
             ( { model
-                | state = ViewingErrorPage "Page not found"
+                | state = ViewingErrorPage <| Maybe.withDefault "No message received" str
               }
             , Cmd.none
             )
@@ -89,7 +89,9 @@ handleUrlChange url model =
 
                 Nothing ->
                     ( model
-                    , Route.pushUrl model.navKey Route.Error
+                    , Route.pushUrl model.navKey <|
+                        Route.Error <|
+                            Just "Attempted to view dashboard when not signed in"
                     )
 
         Account ->
@@ -103,7 +105,9 @@ handleUrlChange url model =
 
                 Nothing ->
                     ( model
-                    , Route.pushUrl model.navKey Route.Error
+                    , Route.pushUrl model.navKey <|
+                        Route.Error <|
+                            Just "Attempted to view account when not signed in"
                     )
 
         SignOut ->
@@ -121,7 +125,9 @@ handleUrlChange url model =
 
                 Nothing ->
                     ( model
-                    , Route.pushUrl model.navKey Route.Error
+                    , Route.pushUrl model.navKey <|
+                        Route.Error <|
+                            Just "Attempted to sign out when not signed in"
                     )
 
 
@@ -147,8 +153,8 @@ handleHomeMsg msg model =
             )
 
         _ ->
-            ( { model | state = ViewingErrorPage <| pageStateError "Home" }
-            , Cmd.none
+            ( model
+            , pageStateError model.navKey "Home"
             )
 
 
@@ -167,10 +173,8 @@ handleAccountMsg msg model =
             )
 
         _ ->
-            ( { model
-                | state = ViewingErrorPage <| pageStateError "account"
-              }
-            , Cmd.none
+            ( model
+            , pageStateError model.navKey "Account"
             )
 
 
@@ -188,7 +192,7 @@ handleSignOutMsg msg model =
 
         _ ->
             ( model
-            , Route.pushUrl model.navKey Route.Error
+            , pageStateError model.navKey "SignOut"
             )
 
 
@@ -227,9 +231,15 @@ update msg model =
 -- VIEW
 
 
-pageStateError : String -> String
-pageStateError str =
-    "Attempted to handle " ++ str ++ " message whilst not viewing " ++ str
+pageStateError : Nav.Key -> String -> Cmd Msg
+pageStateError navKey str =
+    Route.pushUrl navKey <|
+        Route.Error <|
+            Just <|
+                "Attempted to handle "
+                    ++ str
+                    ++ " message whilst not viewing "
+                    ++ str
 
 
 loadingView : Element msg
