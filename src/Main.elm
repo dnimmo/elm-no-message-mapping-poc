@@ -4,7 +4,6 @@ import Browser exposing (UrlRequest(..))
 import Browser.Navigation as Nav
 import Components.Layout as Layout
 import Element exposing (..)
-import Json.Decode exposing (decodeValue, errorToString)
 import Page.Account as Account
 import Page.Dashboard as Dashboard
 import Page.Error as Error
