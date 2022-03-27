@@ -35,10 +35,17 @@ Excellent question. Entirely coincidentally, this is the reason this example exi
 What happens is this: 
 
 The user submits their new name
+
 -> The User's account (outside of the Elm application) is updated with the new name
+
 -> The `User.storedUserUpdated` subscription is triggered with the updated User details
+
 -> This subscription is being listened to by both `User` and `Page.Account`
+
     -> `User.update` updates the User that is stored in its Model
+
     -> `Page.Account.update` only checks to see whether a valid User was received
+
         -> If a valid User was received, the user is redirected to `ViewAccount` as we know that their update succeeded
+
         -> If a valid User was not received, the user is presented with an error message to tell them that their update failed
